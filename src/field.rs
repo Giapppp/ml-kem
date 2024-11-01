@@ -29,6 +29,10 @@ impl FieldElement {
     pub fn inv(&self) -> FieldElement {
         self.pow(FieldElement::Q - 2)
     }
+
+    pub fn to_int(&self) -> Integer {
+        self.0
+    }
 }   // End of FieldElement struct
 
 impl Add<FieldElement> for FieldElement {

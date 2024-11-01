@@ -1,8 +1,9 @@
 use std::ops::{Add, Mul};
+use crate::encode::bytes_to_bits;
 use crate::field::FieldElement as FF;
-use crate::helper::{bitrev7, base_case_multiply};
+use crate::helper::{xof, bitrev7, base_case_multiply};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial {
     pub coeffs: Vec<FF>,
 }
@@ -22,11 +23,20 @@ impl Polynomial{
         }
         padded_coeffs
     }
+
+    pub fn zero_polynomial() -> Polynomial {
+        Polynomial::new(vec![FF(0); Polynomial::N])
+    }
+
+    pub fn list(&self) -> Vec<u16> {
+        let coeffs = self.coeffs.clone();
+        coeffs.iter().map(|x| x.to_int()).collect::<Vec<_>>().to_vec()
+    }
 }
 
-// Algorithm 9
+// Algorithm 9: Computes ̂ the NTT representation 𝑓 of the given polynomial 𝑓 ∈ 𝑅𝑞.
 impl Polynomial {
-    fn ntt(self) -> Polynomial {
+    pub fn ntt(self) -> Polynomial {
         let mut f_ntt = self.clone();
         let mut i: usize = 1;
         let mut t: FF;
@@ -45,9 +55,9 @@ impl Polynomial {
     }
 }
 
-// Algorithm 10
+// Algorithm 10: Computes ̂the polynomial 𝑓 ∈ 𝑅𝑞 that corresponds to the given NTT representation 𝑓 ∈ 𝑇𝑞.
 impl Polynomial {
-    fn intt(self) -> Polynomial {
+    pub fn intt(self) -> Polynomial {
         let mut f_intt = self.clone();
         let mut i: usize = 127;
         let mut t: FF;
@@ -69,10 +79,10 @@ impl Polynomial {
     }
 }
 
-// Algorithm 11
+// Algorithm 11: Computes the product (in the ring 𝑇𝑞) of two NTT representations.
 impl Polynomial {
-    fn multiply_ntt(f: Polynomial, g: Polynomial) -> Polynomial {
-        let mut h = Polynomial::new(vec![FF(0); Polynomial::N]);
+    pub fn multiply_ntt(f: Polynomial, g: Polynomial) -> Polynomial {
+        let mut h = Polynomial::zero_polynomial();
         for i in 0..128 {
             let exp = (2 * bitrev7(i) + 1) as u16;
             let coeffs = base_case_multiply(f.coeffs[2 * i], f.coeffs[2 * i + 1], g.coeffs[2 * i], g.coeffs[2 * i + 1], Polynomial::G.pow(exp));
@@ -104,6 +114,48 @@ impl Mul<Polynomial> for Polynomial {
         let h_ntt = Polynomial::multiply_ntt(f_ntt, g_ntt);
         h_ntt.intt()
     }
+}
+
+//Algorithm 7: Takes a 32-byte seed and two indices as input and outputs a pseudorandom element of 𝑇𝑞.
+pub fn sample_ntt(mut bytes: Vec<u8>, i: u8, j:u8) -> Polynomial {
+    bytes.push(i);
+    bytes.push(j);
+    assert_eq!(bytes.len(), 34);
+    let mut a = Polynomial::zero_polynomial();
+    let mut j = 0;
+    while j < 256 {
+        let c = xof(bytes.clone());
+        let d1: u16 = (c[0] as u16) + 256 * ((c[1] as u16) % 16);
+        let d2: u16 = (c[1] as u16) / 16 + 16 * (c[2] as u16);
+        if d1 < FF::Q {
+            a.coeffs[j] = FF(d1);
+            j += 1;
+        }
+        if d2 < FF::Q && j < 256 {
+            a.coeffs[j] = FF(d2);
+            j += 1;
+        }
+    }
+    a
+}
+
+// Algorithm 8: Takes a seed as input and outputs a pseudorandom sample from the distribution D𝜂(𝑅𝑞).
+pub fn sample_poly_cbd(mut bytes: Vec<u16>, eta: usize) -> Vec<FF> {
+    while bytes.len() < 64 * eta {
+        bytes.push(0);
+    }
+    let mut f = vec![FF(0); 256];
+    let bits = bytes_to_bits(bytes);
+    for i in 0..256 {
+        let mut x = 0u16;
+        let mut y = 0u16;
+        for j in 0..eta {
+            x += bits[2 * i * eta + j];
+            y += bits[(2 * i + 1) * eta + j];
+            f[i] = FF(x - y);
+        }
+    }
+    f
 }
 
 #[cfg(test)]
