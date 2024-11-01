@@ -1,5 +1,5 @@
 use std::vec;
-use crate::field::FieldElement as FF;
+use crate::constant::{Q, N};
 
 // Algorithm 3: Converts a bit array (of a length that is a multiple of eight) into an array of bytes in little endian order.
 pub fn bits_to_bytes(mut bits: Vec<u16>) -> Vec<u16> {
@@ -29,11 +29,11 @@ pub fn bytes_to_bits(mut bytes: Vec<u16>) -> Vec<u16> {
 
 //Algorithm 5: Encodes an array of 𝑑-bit integers into a byte array for 1 ≤ 𝑑 ≤ 12.
 pub fn bytes_encode(d: usize, mut f: Vec<u16>) -> Vec<u16> {
-    while f.len() != 256 {
+    while f.len() != N {
         f.push(0);
     }
-    let mut b = vec![0u16; 256 * d];
-    for i in 0..256 {
+    let mut b = vec![0u16; N * d];
+    for i in 0..N {
         let mut a = f[i];
         for j in 0..d {
             b[i * d + j] = a & 1;
@@ -47,7 +47,7 @@ pub fn bytes_encode(d: usize, mut f: Vec<u16>) -> Vec<u16> {
 pub fn bytes_decode(d: usize, mut bytes: Vec<u16>) -> Vec<u16> {
     let mut m = 1 << d;
     if d == 12 {
-        m = FF::Q;
+        m = Q;
     }
 
     while bytes.len() != 32 * d {
@@ -55,9 +55,9 @@ pub fn bytes_decode(d: usize, mut bytes: Vec<u16>) -> Vec<u16> {
     }
 
     let bit = bytes_to_bits(bytes);
-    assert_eq!(bit.len(), 256 * d);
-    let mut f = vec![0u16; 256];
-    for i in 0..256 {
+    assert_eq!(bit.len(), N * d);
+    let mut f = vec![0u16; N];
+    for i in 0..N {
         for j in 0..d {
             f[i] += bit[i * d + j] << j;
         }
@@ -100,7 +100,7 @@ mod tests {
         let bytes = vec![0b00010010, 0b00110100, 0b01010110, 0b01111000];
         let f = bytes_decode(d, bytes);
         let mut check: Vec<u16> = vec![2, 1, 4, 3, 6, 5, 8, 7];
-        check.append(&mut vec![0; 256 - check.len()]);
+        check.append(&mut vec![0; N - check.len()]);
         assert_eq!(f, check);
     }
 }

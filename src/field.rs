@@ -1,15 +1,14 @@
 use std::ops::{Add, Sub, Mul};
 use std::cmp::{PartialEq, Eq};
 pub type Integer = u16;
+use crate::constant::Q;
 
 #[derive(Debug, Clone, Copy)]
 pub struct FieldElement(pub Integer);
 
 impl FieldElement {
-    pub const Q: Integer = 3329;
-
     pub fn new(value: Integer) -> FieldElement {
-        FieldElement(value % FieldElement::Q)
+        FieldElement(value % Q)
     }
 
     pub fn pow(&self, exponent: Integer) -> FieldElement {
@@ -27,7 +26,7 @@ impl FieldElement {
     }
 
     pub fn inv(&self) -> FieldElement {
-        self.pow(FieldElement::Q - 2)
+        self.pow(Q - 2)
     }
 
     pub fn to_int(&self) -> Integer {
@@ -39,7 +38,7 @@ impl Add<FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn add(self, other: FieldElement) -> FieldElement {
-        FieldElement((self.0 + other.0) % FieldElement::Q)
+        FieldElement((self.0 + other.0) % Q)
     }
 }
 
@@ -47,7 +46,7 @@ impl Sub<FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn sub(self, other: FieldElement) -> FieldElement {
-        FieldElement((self.0 + FieldElement::Q - other.0) % FieldElement::Q)
+        FieldElement((self.0 + Q - other.0) % Q)
     }
 }
 
@@ -55,7 +54,7 @@ impl Mul<FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn mul(self, other: FieldElement) -> FieldElement {
-        let _q = FieldElement::Q as u32;
+        let _q = Q as u32;
         let _ans = ((self.0 as u32) * (other.0 as u32)) % _q;
         FieldElement(_ans as Integer)
     }

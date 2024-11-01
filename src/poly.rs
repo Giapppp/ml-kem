@@ -1,7 +1,8 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Sub};
 use crate::encode::bytes_to_bits;
 use crate::field::FieldElement as FF;
-use crate::helper::{xof, bitrev7, base_case_multiply};
+use crate::helper::{xof, base_case_multiply};
+use crate::constant::{BITREV7, BITREV7_2, Q, N};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial {
@@ -9,7 +10,7 @@ pub struct Polynomial {
 }
 
 impl Polynomial{
-    pub const N: usize = 256;
+    pub const N: usize = N;
     pub const G: FF = FF(17);
     pub fn new(mut coeffs: Vec<FF>) -> Polynomial {
         coeffs = Polynomial::padding_zeros(coeffs);
@@ -41,8 +42,8 @@ impl Polynomial {
         let mut i: usize = 1;
         let mut t: FF;
         for len in [128, 64, 32, 16, 8, 4, 2] {
-            for start in (0..256).step_by(2 * len) {
-                let zeta = Polynomial::G.pow(bitrev7(i) as u16);
+            for start in (0..N).step_by(2 * len) {
+                let zeta = FF::new(BITREV7[i]);
                 i += 1;
                 for j in start..start + len {
                     t = zeta * f_ntt.coeffs[j + len];
@@ -62,8 +63,8 @@ impl Polynomial {
         let mut i: usize = 127;
         let mut t: FF;
         for len in [2, 4, 8, 16, 32, 64, 128] {
-            for start in (0..256).step_by(2 * len) {
-                let zeta = Polynomial::G.pow(bitrev7(i) as u16);
+            for start in (0..N).step_by(2 * len) {
+                let zeta = FF::new(BITREV7[i]);
                 i -= 1;
                 for j in start..start + len {
                     t = f_intt.coeffs[j];
@@ -72,7 +73,7 @@ impl Polynomial {
                 }
             }
         }
-        for i in 0..256 {
+        for i in 0..N {
             f_intt.coeffs[i] = f_intt.coeffs[i] * FF(3303);
         }
         f_intt
@@ -84,8 +85,7 @@ impl Polynomial {
     pub fn multiply_ntt(f: Polynomial, g: Polynomial) -> Polynomial {
         let mut h = Polynomial::zero_polynomial();
         for i in 0..128 {
-            let exp = (2 * bitrev7(i) + 1) as u16;
-            let coeffs = base_case_multiply(f.coeffs[2 * i], f.coeffs[2 * i + 1], g.coeffs[2 * i], g.coeffs[2 * i + 1], Polynomial::G.pow(exp));
+            let coeffs = base_case_multiply(f.coeffs[2 * i], f.coeffs[2 * i + 1], g.coeffs[2 * i], g.coeffs[2 * i + 1], FF::new(BITREV7_2[i]));
             h.coeffs[2 * i] = coeffs.0;
             h.coeffs[2 * i + 1] = coeffs.1;
         }
@@ -100,6 +100,18 @@ impl Add<Polynomial> for Polynomial {
         let mut sum = Vec::new();
         for i in 0..Polynomial::N {
             sum.push(self.coeffs[i] + other.coeffs[i]);
+        }
+        Polynomial::new(sum)
+    }
+}
+
+impl Sub<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, other: Polynomial) -> Polynomial {
+        let mut sum = Vec::new();
+        for i in 0..Polynomial::N {
+            sum.push(self.coeffs[i] - other.coeffs[i]);
         }
         Polynomial::new(sum)
     }
@@ -123,15 +135,15 @@ pub fn sample_ntt(mut bytes: Vec<u8>, i: u8, j:u8) -> Polynomial {
     assert_eq!(bytes.len(), 34);
     let mut a = Polynomial::zero_polynomial();
     let mut j = 0;
-    while j < 256 {
+    while j < N {
         let c = xof(bytes.clone());
         let d1: u16 = (c[0] as u16) + 256 * ((c[1] as u16) % 16);
         let d2: u16 = (c[1] as u16) / 16 + 16 * (c[2] as u16);
-        if d1 < FF::Q {
+        if d1 < Q {
             a.coeffs[j] = FF(d1);
             j += 1;
         }
-        if d2 < FF::Q && j < 256 {
+        if d2 < Q && j < N {
             a.coeffs[j] = FF(d2);
             j += 1;
         }
@@ -144,15 +156,15 @@ pub fn sample_poly_cbd(mut bytes: Vec<u16>, eta: usize) -> Vec<FF> {
     while bytes.len() < 64 * eta {
         bytes.push(0);
     }
-    let mut f = vec![FF(0); 256];
+    let mut f = vec![FF(0); N];
     let bits = bytes_to_bits(bytes);
-    for i in 0..256 {
+    for i in 0..N {
         let mut x = 0u16;
         let mut y = 0u16;
         for j in 0..eta {
             x += bits[2 * i * eta + j];
             y += bits[(2 * i + 1) * eta + j];
-            f[i] = FF(x - y);
+            f[i] = FF(x) - FF(y);
         }
     }
     f
@@ -166,11 +178,11 @@ mod tests {
     fn test_padding_zeros() {
         let p = Polynomial::new(vec![FF(1), FF(2), FF(3)]);
         let padded_p = Polynomial::padding_zeros(p.coeffs);
-        assert_eq!(padded_p.len(), 256);
+        assert_eq!(padded_p.len(), N);
         assert_eq!(padded_p[0], FF(1));
         assert_eq!(padded_p[1], FF(2));
         assert_eq!(padded_p[2], FF(3));
-        for i in 3..256 {
+        for i in 3..N {
             assert_eq!(padded_p[i], FF(0));
         }
     }

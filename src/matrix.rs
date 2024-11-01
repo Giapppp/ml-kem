@@ -1,4 +1,3 @@
-use crate::field::FieldElement as FF;
 use crate::poly::Polynomial;
 
 #[derive(Debug, Clone, PartialEq)]

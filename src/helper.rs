@@ -1,26 +1,31 @@
 use crate::field::FieldElement as FF;
 use sha3::{Shake128, Shake256, Sha3_256, Sha3_512, Digest, digest::{Update, ExtendableOutput, XofReader}};
+use rand::Rng;
 
-// Bit reverse function for 7-bit numbers
-pub fn bitrev7(x: usize) -> usize {
-    let mut y = 0;
-    for i in 0..7 {
-        y = (y << 1) | (x >> i & 1);
-    }
+// Compress/Decompress function
+fn compress_number(x: u16, d: u8) -> u16 {
+    let x = ((u32::from(x) << d) + 1664) as f32;
+    let y = (x / 3328.0).round() as u16;
+    y & ((1 << d) - 1)
+}
+
+fn decompress_number(x: u16, d: u8) -> u16 {
+    let x = f32::from(x) * 3328.0;
+    let y = 1u16 << d;
+    let y = (x / f32::from(y)).round() as u16;
     y
 }
 
-// Compress/Decompress function
 pub fn compress(v: Vec<u16>, d: u8) -> Vec<u16> {
     v.iter()
-    .map(|x| ((((1u16 << d) as f32 / FF::Q as f32) * (*x as f32)).round() as u16) & ((1u16 << d - 1)))
-    .collect()
+    .map(|x: &u16| compress_number(*x, d))
+    .collect::<Vec<u16>>()
 }
 
 pub fn decompress(v: Vec<u16>, d: u8) -> Vec<u16> {
     v.iter()
-    .map(|x| ((FF::Q as f32 / (1u16 << d) as f32) * (*x as f32))
-    .round() as u16).collect()
+    .map(|x: &u16| decompress_number(*x, d))
+    .collect::<Vec<u16>>()
 }
 
 // Algorithm 12: Computes the product of two degree-one polynomials with respect to a quadratic modulus.
@@ -69,6 +74,11 @@ pub fn g(s: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
     let mut sha3 = Sha3_512::new();
     Update::update(&mut sha3, &s);
     let output = sha3.finalize().to_vec();
-    (output[..32].to_vec(), output[32..].to_vec())
+    (output[0..32].to_vec(), output[32..64].to_vec())
 }
 
+// Generate random bytes
+pub fn random_bytes(n: usize) -> Vec<u8> {
+    let mut rng = rand::thread_rng();
+    (0..n).map(|_| rng.gen::<u8>()).collect()
+}
