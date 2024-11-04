@@ -26,7 +26,7 @@ pub fn encaps_internal(ek: Vec<u16>, m: Vec<u8>) -> (Vec<u8>, Vec<u16>) {
 }
 
 // Algorithm 18: Uses the decapsulation key to produce a shared secret key from a ciphertext.
-pub fn decaps_internal(dk: Vec<u16>, mut c: Vec<u16>) -> Vec<u8> {
+pub fn decaps_internal(dk: Vec<u16>, c: Vec<u16>) -> Vec<u8> {
     let dk_pke = dk.clone()[0..384*K].to_vec();
     let ek_pke = dk.clone()[384*K..768*K+32].to_vec();
     let mut h = dk.clone()[768*K+32..768*K+64].to_vec();
@@ -35,8 +35,7 @@ pub fn decaps_internal(dk: Vec<u16>, mut c: Vec<u16>) -> Vec<u8> {
     let mut m_ = m.clone();
     m_.append(&mut h);
     let (mut k_, r_) = g(m_.clone().iter().map(|x| *x as u8).collect());
-    
-    z.append(&mut c);
+    z.append(&mut c.clone());
     let kk = j(z.clone().iter().map(|x| *x as u8).collect());
 
     let c_ = kpke_enc(ek_pke.clone(), m.iter().map(|x| *x as u16).collect(), r_);
