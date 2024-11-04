@@ -22,22 +22,16 @@ pub fn kpke_key_gen(mut bytes: Vec<u8>) -> (Vec<u16>, Vec<u16>) {
     }
 
     for _ in 0..K {
-        s.push(Polynomial::new(sample_poly_cbd(prf(ETA1, sigma.clone(), n), ETA1)));
+        s.push(sample_poly_cbd(prf(ETA1, sigma.clone(), n), ETA1).ntt());
         n += 1;
     }
 
     for _ in 0..K {
-        e.push(Polynomial::new(sample_poly_cbd(prf(ETA1, sigma.clone(), n), ETA1)));
+        e.push(sample_poly_cbd(prf(ETA1, sigma.clone(), n), ETA1).ntt());
         n += 1;
     }
 
-    for i in 0..K {
-        s[i] = s[i].clone().ntt();
-        e[i] = e[i].clone().ntt();
-    }
-
     let t = add(mul(&a, s.clone()), e.clone());
-    
     let mut ek_pke = Vec::new();
     for i in 0..K {
         let temp: Vec<u16> = bytes_encode(12, t[i].coeffs.iter().map(|x| x.to_int()).collect());
@@ -60,10 +54,9 @@ pub fn kpke_enc(ek_pke: Vec<u16>, m: Vec<u16>, r: Vec<u8>) -> Vec<u16> {
     let mut t: Vec<Polynomial> = Vec::new();
 
     for i in 0..K {
-        let temp: Polynomial = Polynomial::new(bytes_decode(12, ek_pke.clone()[i * 32..(i + 1) * 32].to_vec()).iter().map(|x| FF(*x)).collect());
+        let temp: Polynomial = Polynomial::new(bytes_decode(12, ek_pke.clone()[i * 384..(i + 1) * 384].to_vec()).iter().map(|x| FF(*x)).collect());
         t.push(temp);
     }
-
     let rho: Vec<u8> = ek_pke.clone()[384 * K..384 * K + 32].iter().map(|x| *x as u8).collect();
 
     let mut a = Matrix::zero_matrix(K, K);
@@ -78,28 +71,23 @@ pub fn kpke_enc(ek_pke: Vec<u16>, m: Vec<u16>, r: Vec<u8>) -> Vec<u16> {
     }
 
     for _ in 0..K {
-        y.push(Polynomial::new(sample_poly_cbd(prf(ETA1, r.clone(), n), ETA1)).ntt());
+        y.push(sample_poly_cbd(prf(ETA1, r.clone(), n), ETA1).ntt());
         n += 1;
     }
 
     for _ in 0..K {
-        e1.push(Polynomial::new(sample_poly_cbd(prf(ETA2, r.clone(), n), ETA2)).ntt());
+        e1.push(sample_poly_cbd(prf(ETA2, r.clone(), n), ETA2));
         n += 1;
     }
 
-    let e2 = Polynomial::new(sample_poly_cbd(prf(ETA2, r.clone(), n), ETA2));
-
-    for i in 0..K {
-        y[i] = y[i].clone().ntt();
-    }
+    let e2 = sample_poly_cbd(prf(ETA2, r.clone(), n), ETA2);
 
     let ay = mul(&a.transpose(), y.clone());
     for i in 0..K {
         u.push(ay[i].clone().intt() + e1[i].clone());
     }
-
     let nuy = Polynomial::new(decompress(bytes_decode(1, m), 1).iter().map(|x| FF(*x)).collect());
-    
+
     let v = vec_mul(t.clone(), y.clone()).intt() + e2.clone() + nuy.clone();
     
     let mut c1: Vec<u16> = Vec::new();
@@ -107,17 +95,14 @@ pub fn kpke_enc(ek_pke: Vec<u16>, m: Vec<u16>, r: Vec<u8>) -> Vec<u16> {
         let temp: Vec<u16> = bytes_encode(DU, compress(u[i].coeffs.iter().map(|x| x.to_int()).collect(), DU as u8));
         c1.extend(temp);
     }
-
     let c2 = bytes_encode(DV, compress(v.coeffs.iter().map(|x| x.to_int()).collect(), DV as u8));
-    c1.extend(c2);
-    c1
+    [c1, c2].concat()
 }
 
 // Algorithm 15: Uses the decryption key to decrypt a ciphertext.
 pub fn kpke_dec(pk_pke: Vec<u16>, c: Vec<u16>) -> Vec<u16> {
     let c1 = c.clone()[0..32 * DU * K].to_vec();
     let c2 = c.clone()[32 * DU * K..32 * (DU * K + DV)].to_vec();
-
     let mut u = Vec::new();
     for i in 0..K {
         u.push(Polynomial::new(decompress(bytes_decode(DU, c1.clone()[32 * DU * i..32 * DU * (i + 1)].to_vec()), DU as u8).iter().map(|x| FF(*x)).collect()));
@@ -125,11 +110,10 @@ pub fn kpke_dec(pk_pke: Vec<u16>, c: Vec<u16>) -> Vec<u16> {
 
     let v = Polynomial::new(decompress(bytes_decode(DV, c2), DV as u8).iter().map(|x| FF(*x)).collect());
     let mut s: Vec<Polynomial> = Vec::new();
-    
-    for i in 0..K {
-        s.push(Polynomial::new(bytes_decode(12, pk_pke.clone()[32 * i..32 * (i + 1)].to_vec()).iter().map(|x| FF(*x)).collect()));
-    }
 
+    for i in 0..K {
+        s.push(Polynomial::new(bytes_decode(12, pk_pke.clone()[384 * i..384 * (i + 1)].to_vec()).iter().map(|x| FF(*x)).collect()));
+    }
     for i in 0..K {
         u[i] = u[i].clone().ntt();
     }

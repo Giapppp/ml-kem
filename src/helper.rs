@@ -3,29 +3,27 @@ use sha3::{Shake128, Shake256, Sha3_256, Sha3_512, Digest, digest::{Update, Exte
 use rand::Rng;
 
 // Compress/Decompress function
-fn compress_number(x: u16, d: u8) -> u16 {
-    let x = ((u32::from(x) << d) + 1664) as f32;
-    let y = (x / 3328.0).round() as u16;
-    y & ((1 << d) - 1)
+fn field_reduce(x: u16) -> u16 {
+    let wx = x.wrapping_sub(3329);
+    wx.wrapping_add((wx >> 15).wrapping_mul(3329))
 }
 
-fn decompress_number(x: u16, d: u8) -> u16 {
-    let x = f32::from(x) * 3328.0;
-    let y = 1u16 << d;
-    let y = (x / f32::from(y)).round() as u16;
-    y
+fn div_and_round(dividend: u32, divisor: u32) -> u16 {
+    field_reduce(((dividend + (divisor >> 1)) / divisor) as u16)
 }
 
-pub fn compress(v: Vec<u16>, d: u8) -> Vec<u16> {
-    v.iter()
-    .map(|x: &u16| compress_number(*x, d))
-    .collect::<Vec<u16>>()
+pub fn compress(mut v: Vec<u16>, d: u8) -> Vec<u16> {
+    for i in 0..v.len() {
+        v[i] = div_and_round((v[i] as u32) << d, 3329);
+    }
+    v
 }
 
-pub fn decompress(v: Vec<u16>, d: u8) -> Vec<u16> {
-    v.iter()
-    .map(|x: &u16| decompress_number(*x, d))
-    .collect::<Vec<u16>>()
+pub fn decompress(mut v: Vec<u16>, d: u8) -> Vec<u16> {
+    for i in 0..v.len() {
+        v[i] = div_and_round((v[i] as u32) * 3329, 1u32 << d);
+    }
+    v
 }
 
 // Algorithm 12: Computes the product of two degree-one polynomials with respect to a quadratic modulus.

@@ -40,13 +40,12 @@ impl Polynomial {
     pub fn ntt(self) -> Polynomial {
         let mut f_ntt = self.clone();
         let mut i: usize = 1;
-        let mut t: FF;
         for len in [128, 64, 32, 16, 8, 4, 2] {
             for start in (0..N).step_by(2 * len) {
                 let zeta = FF::new(BITREV7[i]);
                 i += 1;
-                for j in start..start + len {
-                    t = zeta * f_ntt.coeffs[j + len];
+                for j in start..(start + len) {
+                    let t = zeta * f_ntt.coeffs[j + len];
                     f_ntt.coeffs[j + len] = f_ntt.coeffs[j] - t;
                     f_ntt.coeffs[j] = f_ntt.coeffs[j] + t;
                 }
@@ -61,13 +60,12 @@ impl Polynomial {
     pub fn intt(self) -> Polynomial {
         let mut f_intt = self.clone();
         let mut i: usize = 127;
-        let mut t: FF;
         for len in [2, 4, 8, 16, 32, 64, 128] {
             for start in (0..N).step_by(2 * len) {
                 let zeta = FF::new(BITREV7[i]);
                 i -= 1;
                 for j in start..start + len {
-                    t = f_intt.coeffs[j];
+                    let t = f_intt.coeffs[j];
                     f_intt.coeffs[j] = t + f_intt.coeffs[j + len];
                     f_intt.coeffs[j + len] = zeta * (f_intt.coeffs[j + len] - t);
                 }
@@ -137,8 +135,8 @@ pub fn sample_ntt(mut bytes: Vec<u8>, i: u8, j:u8) -> Polynomial {
     let mut j = 0;
     while j < N {
         let c = xof(bytes.clone());
-        let d1: u16 = (c[0] as u16) + 256 * ((c[1] as u16) % 16);
-        let d2: u16 = (c[1] as u16) / 16 + 16 * (c[2] as u16);
+        let d1: u16 = c[0] + 256 * (c[1] % 16);
+        let d2: u16 = c[1].div_euclid(16) + 16 * c[2];
         if d1 < Q {
             a.coeffs[j] = FF(d1);
             j += 1;
@@ -152,7 +150,7 @@ pub fn sample_ntt(mut bytes: Vec<u8>, i: u8, j:u8) -> Polynomial {
 }
 
 // Algorithm 8: Takes a seed as input and outputs a pseudorandom sample from the distribution D𝜂(𝑅𝑞).
-pub fn sample_poly_cbd(mut bytes: Vec<u16>, eta: usize) -> Vec<FF> {
+pub fn sample_poly_cbd(mut bytes: Vec<u16>, eta: usize) -> Polynomial {
     while bytes.len() < 64 * eta {
         bytes.push(0);
     }
@@ -167,7 +165,7 @@ pub fn sample_poly_cbd(mut bytes: Vec<u16>, eta: usize) -> Vec<FF> {
             f[i] = FF(x) - FF(y);
         }
     }
-    f
+    Polynomial::new(f)
 }
 
 #[cfg(test)]

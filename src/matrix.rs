@@ -18,7 +18,7 @@ impl Matrix {
         let mut matrix = vec![vec![Polynomial::zero_polynomial(); self.matrix.len()]; self.matrix[0].len()];
         for i in 0..self.matrix.len() {
             for j in 0..self.matrix[i].len() {
-                matrix[j][i] = self.matrix[i][j].clone();
+                matrix[i][j] = self.matrix[j][i].clone();
             }
         }
         Matrix::init(matrix)
@@ -29,16 +29,16 @@ pub fn mul(a: &Matrix, b: Vec<Polynomial>) -> Vec<Polynomial> {
     let mut c = vec![Polynomial::zero_polynomial(); a.matrix.len()];
     for i in 0..a.matrix.len() {
         for j in 0..a.matrix[i].len() {
-            c[i] = c[i].clone() + a.matrix[i][j].clone() * b[j].clone();
+            c[i] = c[i].clone() + Polynomial::multiply_ntt(a.matrix[i][j].clone(), b[j].clone());
         }
     }
     c
 }
 
 pub fn add(a: Vec<Polynomial>, b: Vec<Polynomial>) -> Vec<Polynomial> {
-    let mut c = vec![Polynomial::zero_polynomial(); a.len()];
+    let mut c = Vec::new();
     for i in 0..a.len() {
-        c[i] = a[i].clone() + b[i].clone();
+        c.push(a[i].clone() + b[i].clone());
     }
     c
 }
@@ -46,7 +46,7 @@ pub fn add(a: Vec<Polynomial>, b: Vec<Polynomial>) -> Vec<Polynomial> {
 pub fn vec_mul(a: Vec<Polynomial>, b: Vec<Polynomial>) -> Polynomial {
     let mut c = Polynomial::zero_polynomial();
     for i in 0..a.len() {
-        c = c.clone() + a[i].clone() * b[i].clone();
+        c = c.clone() + Polynomial::multiply_ntt(a[i].clone(), b[i].clone());
     }
     c
 }

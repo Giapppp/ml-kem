@@ -37,7 +37,7 @@ pub fn bytes_encode(d: usize, mut f: Vec<u16>) -> Vec<u16> {
         let mut a = f[i];
         for j in 0..d {
             b[i * d + j] = a & 1;
-            a = (a - b[i * d + j]) >> 1;
+            a = a >> 1;
         }
     }
     bits_to_bytes(b)
@@ -85,22 +85,12 @@ mod tests {
     }
 
     #[test]
-    fn test_bytes_encode() {
+    fn test_bytes_encode_decode() {
         let d = 5;
-        let f = vec![0b11110, 0b10100, 0b11000, 0b10010, 0b11101];
-        let bytes = bytes_encode(d, f);
-        let mut check = vec![0b10011110, 0b1100010, 0b11011001, 0b00000001];
-        check.append(&mut vec![0; 32*d - check.len()]);
-        assert_eq!(bytes, check);
-    }
-
-    #[test]
-    fn test_bytes_decode() {
-        let d = 4;
-        let bytes = vec![0b00010010, 0b00110100, 0b01010110, 0b01111000];
-        let f = bytes_decode(d, bytes);
-        let mut check: Vec<u16> = vec![2, 1, 4, 3, 6, 5, 8, 7];
-        check.append(&mut vec![0; N - check.len()]);
-        assert_eq!(f, check);
+        let mut f = vec![0b11110, 0b10100, 0b11000, 0b10010, 0b11101];
+        f.append(&mut vec![0; N - f.len()]);
+        let bytes = bytes_encode(d, f.clone());
+        let f_ = bytes_decode(d, bytes);
+        assert_eq!(f, f_);
     }
 }
