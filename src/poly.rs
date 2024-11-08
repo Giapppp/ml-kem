@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 use crate::encode::bytes_to_bits;
 use crate::field::FieldElement as FF;
 use crate::helper::{xof, base_case_multiply};
-use crate::constant::{BITREV7, BITREV7_2, Q, N};
+use crate::constant::{CONST1, CONST2, Q, N};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial {
@@ -42,7 +42,7 @@ impl Polynomial {
         let mut i: usize = 1;
         for len in [128, 64, 32, 16, 8, 4, 2] {
             for start in (0..N).step_by(2 * len) {
-                let zeta = FF::new(BITREV7[i]);
+                let zeta = FF::new(CONST1[i]);
                 i += 1;
                 for j in start..(start + len) {
                     let t = zeta * f_ntt.coeffs[j + len];
@@ -62,7 +62,7 @@ impl Polynomial {
         let mut i: usize = 127;
         for len in [2, 4, 8, 16, 32, 64, 128] {
             for start in (0..N).step_by(2 * len) {
-                let zeta = FF::new(BITREV7[i]);
+                let zeta = FF::new(CONST1[i]);
                 i -= 1;
                 for j in start..start + len {
                     let t = f_intt.coeffs[j];
@@ -83,7 +83,7 @@ impl Polynomial {
     pub fn multiply_ntt(f: Polynomial, g: Polynomial) -> Polynomial {
         let mut h = Polynomial::zero_polynomial();
         for i in 0..128 {
-            let coeffs = base_case_multiply(f.coeffs[2 * i], f.coeffs[2 * i + 1], g.coeffs[2 * i], g.coeffs[2 * i + 1], FF::new(BITREV7_2[i]));
+            let coeffs = base_case_multiply(f.coeffs[2 * i], f.coeffs[2 * i + 1], g.coeffs[2 * i], g.coeffs[2 * i + 1], FF::new(CONST2[i]));
             h.coeffs[2 * i] = coeffs.0;
             h.coeffs[2 * i + 1] = coeffs.1;
         }

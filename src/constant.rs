@@ -1,5 +1,5 @@
-// Const values
-pub const BITREV7: [u16; 128] =   [1, 1729, 2580, 3289, 2642, 630, 1897, 848, 
+// Const values from Appendix A - Precomputed Values for the NTT
+pub const CONST1: [u16; 128] =   [1, 1729, 2580, 3289, 2642, 630, 1897, 848, 
                                 1062, 1919, 193, 797, 2786, 3260, 569, 1746, 
                                 296, 2447, 1339, 1476, 3046, 56, 2240, 1333, 
                                 1426, 2094, 535, 2882, 2393, 2879, 1974, 821, 
@@ -16,7 +16,7 @@ pub const BITREV7: [u16; 128] =   [1, 1729, 2580, 3289, 2642, 630, 1897, 848,
                                 2804, 1092, 403, 1026, 1143, 2150, 2775, 886, 
                                 1722, 1212, 1874, 1029, 2110, 2935, 885, 2154];
 
-pub const BITREV7_2: [u16; 128] = [17, 3312, 2761, 568, 583, 2746, 2649, 680, 
+pub const CONST2: [u16; 128] = [17, 3312, 2761, 568, 583, 2746, 2649, 680, 
                                 1637, 1692, 723, 2606, 2288, 1041, 1100, 2229, 
                                 1409, 1920, 2662, 667, 3281, 48, 233, 3096, 
                                 756, 2573, 2156, 1173, 3015, 314, 3050, 279, 
@@ -39,12 +39,12 @@ pub const N: usize = 256;
 
 pub const G: u16 = 17;
 
-pub const K: usize = 2;
+pub const K: usize = 4;
 
-pub const ETA1: usize = 3;
+pub const ETA1: usize = 2;
 
 pub const ETA2: usize = 2;
 
-pub const DU : usize = 10;
+pub const DU : usize = 11;
 
-pub const DV: usize = 4;
+pub const DV: usize = 5;
