@@ -1,6 +1,8 @@
 # ML-KEM
 My implementation of FIPS-203: Module-Lattice-based Key-Encapsulation Standard in Rust. Notice that this is a personal project created for learning purposes, so it mustn't be used in real world application.
 
+Explanation can be found at https://hackmd.io/@Giapppp/mlkem.
+
 ## Resources
 1. [FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard](https://csrc.nist.gov/pubs/fips/203/final)
 
